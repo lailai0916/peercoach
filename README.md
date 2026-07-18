@@ -9,6 +9,8 @@
   </p>
 </div>
 
+## Project Introduction
+
 **PeerCoach (知心陪练)** flips the usual mental-health chatbot: instead of the AI
 comforting a student, the AI plays a classmate confiding in you, and you practice
 being the person who can catch them — while a supervisor AI scores every reply.
@@ -18,7 +20,7 @@ exist in every classroom but are almost never trained in how to respond. PeerCoa
 turns "knowing how to comfort someone" from a talent into a teachable, measurable
 skill, by adapting the Standardized Patient method from medical education.
 
-## Features
+## Project Features
 
 🔄 **Role Reversal** — The student is the helper, not the helped. Ability stays
 with the student, not the AI.
@@ -45,7 +47,7 @@ LLM-driven.
 students export their records, teachers import them into a class dashboard with a
 re-training list.
 
-## Quick Start
+## Getting Started
 
 The web trainer is a single zero-dependency HTML file. Just open it:
 
@@ -66,36 +68,37 @@ xelatex 设计报告.tex && xelatex 设计报告.tex   # run twice for the TOC
 xelatex 过程性证明材料.tex
 ```
 
-## Structure
+## Project Structure
 
-```text
+```bash
 peercoach/
-├── agent/                            Coze dual-agent build kit
-│   ├── 案例智能体-人设与回复逻辑.md   # case agent (plays the visitor)
-│   ├── 督导智能体-人设与回复逻辑.md   # supervisor agent (scores replies)
-│   ├── 案例剧本库.md                 # 4 leveled cases + authoring spec
-│   ├── 案例示例-自定义导入.json       # importable 5th case sample
-│   └── 工作流与搭建步骤.md            # workflows, database, build steps
+├── agent/                          # Coze dual-agent build kit
+│   ├── 案例智能体-人设与回复逻辑.md            # case agent (plays the visitor)
+│   ├── 督导智能体-人设与回复逻辑.md            # supervisor agent (scores replies)
+│   ├── 案例剧本库.md                    # 4 leveled cases + authoring spec
+│   ├── 案例示例-自定义导入.json             # importable 5th case sample
+│   └── 工作流与搭建步骤.md                 # workflows, database, build steps
 ├── app/
-│   └── index.html                    # web trainer (~1200 lines, zero-dep)
+│   └── index.html                  # web trainer (~1200 lines, zero-dep)
 ├── docs/
-│   ├── 设计报告.pdf                  # design report (16 pp, LaTeX)
-│   ├── 过程性证明材料.pdf             # process documentation (11 pp, LaTeX)
-│   ├── tex/                          # LaTeX sources + figures
-│   ├── 系统截图/                     # 13 real UI screenshots
-│   ├── 数据采集指南.md               # survey, pre/post test, rubric
-│   ├── 朋辈互助现状调研问卷.md         # survey (import + tally sheet)
-│   ├── 问卷-可直接发放版.md           # ready-to-send survey
+│   ├── 设计报告.pdf                    # design report (16 pp, LaTeX)
+│   ├── 过程性证明材料.pdf                 # process documentation (11 pp, LaTeX)
+│   ├── tex/                        # LaTeX sources + figures
+│   ├── 系统截图/                       # 13 real UI screenshots
+│   ├── 数据采集指南.md                   # survey, pre/post test, rubric
+│   ├── 朋辈互助现状调研问卷.md               # survey (import + tally sheet)
+│   ├── 问卷-可直接发放版.md                # ready-to-send survey
 │   └── 附件一基本信息表(已填作品部分).docx
-├── 提交清单.md                       # submission checklist
-├── LICENSE
-└── README.md
+├── 提交清单.md                         # submission checklist
+├── LICENSE                         # Content license
+├── README.md                       # English documentation
+└── README.zh-Hans.md               # Simplified Chinese documentation
 ```
 
 Raw survey/experiment data (collected from minors) is kept out of the repo via
 `.gitignore` and retained privately by the author for on-site verification.
 
-## Background
+## Project Background
 
 Entry for the 2025–2026 National Youth Mental-Health Knowledge & Application
 Innovation Competition ("Little Psychologist", AI-Agent track). Effectiveness is
@@ -106,4 +109,4 @@ for full methodology and statistics.
 
 ## License
 
-Licensed under [CC BY-NC-SA 4.0](LICENSE).
+This project is licensed under [CC BY-NC-SA 4.0](LICENSE).
