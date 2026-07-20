@@ -268,7 +268,7 @@ footer.foot a { color: var(--ink-2); }
         <svg class="ic" id="theme-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
       </button>
       <button class="iconbtn" id="set-btn" title="设置" aria-label="打开设置">
-        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3 5.5 5.5"/></svg>
+        <svg class="ic" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
       </button>
     </div>
   </div>
@@ -486,7 +486,7 @@ footer.foot a { color: var(--ink-2); }
 }
 </style>
 
-<script src="./i18n.js?v=20260720"></script>
+<script src="./i18n.js?v=20260720-2"></script>
 <script>
 "use strict";
 /* ================= 数据 ================= */
@@ -500,14 +500,14 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(db));
 const $ = id => document.getElementById(id);
 const I18N = window.PeerCoachI18n;
 const tr = (key, variables) => I18N.t(key, variables);
-I18N.applyStatic();
-
-if (I18N.language === "en") {
-  document.querySelector(".mission").innerHTML = '<b>How Training Works</b>: AI plays a classmate with a private story. Every response changes their <b>trust</b>—empathy helps them open up, while judgment and lectures close the door. A supervisor observes throughout and gives a professional review at the end.';
-  document.querySelector("footer.foot").innerHTML = 'PeerCoach trains <b>support and referral</b>, not psychological treatment. When a classmate’s situation is beyond what you can carry, you can always say: “Let’s find a trusted adult together.”<br>Emergency support: <a href="tel:12355">12355</a> National Youth Service Hotline · <a href="tel:12356">12356</a> National Mental Health Hotline (24 hours)';
+function renderChrome() {
+  document.querySelector(".mission").innerHTML = tr("missionHtml");
+  document.querySelector("footer.foot").innerHTML = tr("footerHtml");
 }
+I18N.applyStatic();
+renderChrome();
 
-const DIMS = I18N.dims();
+let DIMS = I18N.dims();
 
 /* ================= 案例库 =================
    每幕 beat:
@@ -709,12 +709,15 @@ function renderCases() {
   });
 }
 let briefCase = null;
-function openBrief(c) {
-  briefCase = c;
+function renderBrief(c) {
   $("b-title").textContent = `Lv.${c.level} · ${c.name}`;
   $("b-who").textContent = c.who;
   $("b-brief").textContent = c.brief;
   $("b-goal").textContent = c.goal;
+}
+function openBrief(c) {
+  briefCase = c;
+  renderBrief(c);
   $("dlg-brief").showModal();
 }
 $("b-close").addEventListener("click", () => $("dlg-brief").close());
@@ -910,7 +913,10 @@ function nextBeat() {
 function renderOps(b) {
   const box = $("opts");
   box.innerHTML = "";
-  const shuffled = b.ops.map((o, i) => ({ o, i })).sort(() => Math.random() - .5);
+  if (!S.optionOrder || S.optionOrder.beat !== S.beat) {
+    S.optionOrder = { beat: S.beat, indices: b.ops.map((_, index) => index).sort(() => Math.random() - .5) };
+  }
+  const shuffled = S.optionOrder.indices.map(index => ({ o: b.ops[index], i: index }));
   shuffled.forEach(({ o }) => {
     const btn = document.createElement("button");
     btn.className = "op";
@@ -1001,7 +1007,7 @@ function radarSVG(dims, size) {
     DIMS.map(([, n], i) => { const [x, y] = pt(i, R + 17); return `<text x="${x}" y="${y}" text-anchor="middle" font-size="11" fill="var(--ink-2)">${n}</text>`; }).join("") +
     "</svg>";
 }
-function showReport(pass) {
+function renderReport(pass) {
   const totalPts = Object.values(S.dims).reduce((a, d) => a + d.pts, 0);
   const totalMax = Object.values(S.dims).reduce((a, d) => a + d.max, 0) || 1;
   const score = Math.round(totalPts / totalMax * 100);
@@ -1023,6 +1029,11 @@ function showReport(pass) {
     d.innerHTML = `<p class="you">${tr("replay", { act: r.beat, text: r.you })}</p><p class="note">${tr("replaySupervisor", { text: r.fb })}</p>`;
     rp.appendChild(d);
   });
+  return score;
+}
+function showReport(pass) {
+  S.pass = pass;
+  const score = renderReport(pass);
   db.sessions.push({ ts: Date.now(), caseId: S.c.id, score, pass, referOk: S.referOk ?? null,
     dims: Object.fromEntries(DIMS.map(([k]) => [k, S.dims[k]])) });
   if (pass && !db.passed.includes(S.c.id)) db.passed.push(S.c.id);
@@ -1105,26 +1116,69 @@ $("print-btn").addEventListener("click", () => {
 
 /* ================= 学堂 ================= */
 const lessonsBox = $("lessons");
-LESSONS.forEach((baseLesson, index) => {
-  const L = I18N.localizeLesson(baseLesson, index);
-  const d = document.createElement("div");
-  d.className = "lesson";
-  d.innerHTML = `<button aria-expanded="false">
-      <span class="lico"><svg class="ic" viewBox="0 0 24 24"><path d="${L.icon}"/></svg></span>${L.t}
-      <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-    <div class="body">${L.b}</div>`;
-  d.querySelector("button").addEventListener("click", () => {
-    d.classList.toggle("open");
-    d.querySelector("button").setAttribute("aria-expanded", d.classList.contains("open"));
+function renderLessons() {
+  const openLessons = [...lessonsBox.querySelectorAll(".lesson")]
+    .map((lesson, index) => lesson.classList.contains("open") ? index : -1)
+    .filter(index => index >= 0);
+  lessonsBox.innerHTML = "";
+  LESSONS.forEach((baseLesson, index) => {
+    const L = I18N.localizeLesson(baseLesson, index);
+    const d = document.createElement("div");
+    d.className = "lesson" + (openLessons.includes(index) ? " open" : "");
+    d.innerHTML = `<button aria-expanded="${openLessons.includes(index)}">
+        <span class="lico"><svg class="ic" viewBox="0 0 24 24"><path d="${L.icon}"/></svg></span>${L.t}
+        <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="body">${L.b}</div>`;
+    d.querySelector("button").addEventListener("click", () => {
+      d.classList.toggle("open");
+      d.querySelector("button").setAttribute("aria-expanded", d.classList.contains("open"));
+    });
+    lessonsBox.appendChild(d);
   });
-  lessonsBox.appendChild(d);
-});
+}
+renderLessons();
 
 /* ================= 设置 ================= */
-$("language-btn").addEventListener("click", () => {
+function refreshSessionLanguage() {
+  if (!S) return;
+  const baseCase = CASES.find(c => c.id === S.c.id);
+  if (baseCase) S.c = I18N.localizeCase(baseCase);
+  $("s-ava").textContent = S.c.ava;
+  $("s-name").textContent = S.c.name;
+  setTrust(S.trust);
+  if (!S.ended) beatLabel();
+
+  const input = $("free-in");
+  const draft = input?.value || "";
+  const restoreFocus = document.activeElement === input;
+  const hasControls = $("opts").children.length > 0;
+  if (hasControls && !S.busy && !S.ended) {
+    if (S.llm) renderLLMInput();
+    else renderOps(S.c.beats[S.beat]);
+    const nextInput = $("free-in");
+    if (nextInput) nextInput.value = draft;
+    if (restoreFocus) nextInput?.focus();
+  }
+
+  if ($("dlg-report").open && typeof S.pass === "boolean") renderReport(S.pass);
+}
+function switchLanguage() {
   I18N.setLanguage(I18N.language === "zh" ? "en" : "zh");
-  location.reload();
-});
+  I18N.applyStatic();
+  renderChrome();
+  DIMS = I18N.dims();
+  renderCases();
+  renderLessons();
+  refreshSessionLanguage();
+  if ($("dlg-brief").open && briefCase) {
+    const baseCase = CASES.find(c => c.id === briefCase.id);
+    briefCase = baseCase ? I18N.localizeCase(baseCase) : briefCase;
+    renderBrief(briefCase);
+  }
+  if (views.grow.classList.contains("active")) renderGrow();
+  if (views.teach.classList.contains("active") && tStudents.length) renderTeach();
+}
+$("language-btn").addEventListener("click", switchLanguage);
 $("theme-btn").addEventListener("click", () => I18N.toggleTheme());
 $("set-btn").addEventListener("click", () => {
   const l = db.settings.llm || {};
