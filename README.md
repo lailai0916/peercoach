@@ -47,9 +47,15 @@ LLM-driven.
 students export their records, teachers import them into a class dashboard with a
 re-training list.
 
+🌐 **Bilingual Training** — English is the default; Simplified Chinese covers the
+interface, built-in cases, lessons, supervisor feedback, AI prompts, and exports.
+
+🎨 **Adaptive Themes** — Follows the system by default, with explicit light and dark
+modes stored on the device.
+
 ## Getting Started
 
-The web trainer is a single zero-dependency HTML file. Just open it:
+The web trainer is a zero-dependency static app. Just open it:
 
 ```bash
 open app/index.html          # macOS — double-click also works
@@ -79,7 +85,8 @@ peercoach/
 │   ├── 案例示例-自定义导入.json             # importable 5th case sample
 │   └── 工作流与搭建步骤.md                 # workflows, database, build steps
 ├── app/
-│   └── index.html                  # web trainer (~1200 lines, zero-dep)
+│   ├── i18n.js                     # bilingual cases, lessons, and UI copy
+│   └── index.html                  # zero-dependency web trainer
 ├── docs/
 │   ├── 设计报告.pdf                    # design report (16 pp, LaTeX)
 │   ├── 过程性证明材料.pdf                 # process documentation (11 pp, LaTeX)
