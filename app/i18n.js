@@ -25,6 +25,8 @@
     en: {
       switchLanguage: "Switch language",
       toggleTheme: "Toggle theme",
+      missionHtml: "<b>How Training Works</b>: AI plays a classmate with a private story. Every response changes their <b>trust</b>—empathy helps them open up, while judgment and lectures close the door. A supervisor observes throughout and gives a professional review at the end.",
+      footerHtml: "PeerCoach trains <b>support and referral</b>, not psychological treatment. When a classmate’s situation is beyond what you can carry, you can always say: “Let’s find a trusted adult together.”<br>Emergency support: <a href=\"tel:12355\">12355</a> National Youth Service Hotline · <a href=\"tel:12356\">12356</a> National Mental Health Hotline (24 hours)",
       supervisor: "Supervisor",
       trustDelta: "Trust {value}",
       revealFeedback: "Supervisor feedback is ready · Reveal after class discussion",
@@ -101,6 +103,8 @@
     zh: {
       switchLanguage: "切换语言",
       toggleTheme: "切换主题",
+      missionHtml: "<b>训练方式</b>:AI 扮演一位来倾诉的同学(TA 有自己的隐藏剧本)。你的每句回应都会影响 TA 对你的<b>信任度</b>——共情让 TA 敞开,评判说教让 TA 关闭。督导老师全程在旁,结束后给你专业复盘。",
+      footerHtml: "知心陪练训练的是「陪伴与转介」,不是心理治疗。同学的困扰超出你能承担的范围时,永远可以说:\"我们一起去找老师。\"<br>紧急求助:<a href=\"tel:12355\">12355</a> 青少年服务台 · <a href=\"tel:12356\">12356</a> 心理援助(24 小时)",
       supervisor: "督导", trustDelta: "信任 {value}", revealFeedback: "督导点评已生成 · 全班讨论后点击揭晓",
       trustGuarded: "防御中", trustTesting: "试探中", trustOpen: "敞开了",
       sessionStart: "会谈开始 · {who} · 训练目标：{goal}", sessionStartAI: "会谈开始 · {who} · 训练目标：{goal} · 由大模型实时驱动",
