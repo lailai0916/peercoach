@@ -2,20 +2,29 @@
 
 (() => {
   const LANGUAGE_KEY = "peercoach-language";
-  const THEME_KEY = "peercoach-theme";
   const darkMedia = matchMedia("(prefers-color-scheme: dark)");
 
-  const readLanguage = () => localStorage.getItem(LANGUAGE_KEY) === "zh" ? "zh" : "en";
-  const readTheme = () => {
-    const value = localStorage.getItem(THEME_KEY);
-    return value === "light" || value === "dark" ? value : "system";
+  const BRAND = {
+    en: {
+      title: "PeerCoach",
+      description: "An AI role-play trainer for practicing peer mental-health support in Chinese schools.",
+    },
+    zh: {
+      title: "知心陪练",
+      description: "面向中国校园朋辈心理互助的 AI 角色扮演训练工具。",
+    },
   };
 
+  const readLanguage = () => localStorage.getItem(LANGUAGE_KEY) === "zh" ? "zh" : "en";
+  const systemTheme = () => darkMedia.matches ? "dark" : "light";
+
   let language = readLanguage();
-  let theme = readTheme();
+  let theme = systemTheme();
 
   const UI = {
     en: {
+      switchLanguage: "Switch language",
+      toggleTheme: "Toggle theme",
       supervisor: "Supervisor",
       trustDelta: "Trust {value}",
       revealFeedback: "Supervisor feedback is ready · Reveal after class discussion",
@@ -90,6 +99,8 @@
       emergencyBody: "Thank you for saying it. Your feelings deserve serious attention. Contact a trusted adult now, or call:<br>· National Youth Service Hotline <b>12355</b><br>· National Mental Health Hotline <b>12356</b> (24 hours)<br>· Emergency services 110 / 120<br>The exercise can wait. Your safety matters more.",
     },
     zh: {
+      switchLanguage: "切换语言",
+      toggleTheme: "切换主题",
       supervisor: "督导", trustDelta: "信任 {value}", revealFeedback: "督导点评已生成 · 全班讨论后点击揭晓",
       trustGuarded: "防御中", trustTesting: "试探中", trustOpen: "敞开了",
       sessionStart: "会谈开始 · {who} · 训练目标：{goal}", sessionStartAI: "会谈开始 · {who} · 训练目标：{goal} · 由大模型实时驱动",
@@ -118,7 +129,8 @@
 
   const STATIC_EN = {
     "设置": "Settings", "打开设置": "Open settings", "案例库": "Cases", "训练场": "Training", "成长": "Growth", "学堂": "Lessons", "教师端": "Teachers", "主导航": "Main navigation", "来访者信任度": "Student trust",
-    "知心陪练": "PeerCoach", "PeerCoach · 学着接住身边人": "Learn to support the people around you",
+    "知心陪练": "PeerCoach", "面向中国校园朋辈心理互助的 AI 角色扮演训练工具。": "An AI role-play trainer for practicing peer mental-health support in Chinese schools.",
+    "中": "EN", "切换语言": "Switch language", "切换主题": "Toggle theme",
     "你好,实习心理委员": "Hello, Peer Supporter", "班里有人心情不好时,第一个找到的往往不是老师,是你。这里让你先练会,再上场。": "When a classmate is struggling, they may come to you before a teacher. Practice here before the moment is real.",
     "训练方式": "How Training Works", "还没有进行中的会谈。去「案例库」选一位同学开始。": "No session is in progress. Choose a student from the Case Library to begin.",
     "信任度": "Trust", "试探中": "Testing the waters", "结束会谈": "End Session", "通关案例": "Cases Passed", "完成会谈": "Sessions Completed", "危机转介判定": "Crisis Referrals",
@@ -257,21 +269,21 @@
   const t = (key, variables) => format(UI[language][key] ?? UI.en[key] ?? key, variables);
 
   function applyTheme() {
-    const resolved = theme === "system" ? (darkMedia.matches ? "dark" : "light") : theme;
-    document.documentElement.dataset.theme = resolved;
-    document.documentElement.dataset.themeMode = theme;
+    document.documentElement.dataset.theme = theme;
     const themeColor = document.querySelector('meta[name="theme-color"]');
-    if (themeColor) themeColor.content = resolved === "dark" ? "#101413" : "#f5f7f6";
+    if (themeColor) themeColor.content = theme === "dark" ? "#101413" : "#f5f7f6";
+    const sun = document.getElementById("theme-sun");
+    const moon = document.getElementById("theme-moon");
+    if (sun) sun.hidden = theme !== "dark";
+    if (moon) moon.hidden = theme === "dark";
   }
 
   function applyStatic(root = document.body) {
     document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
     document.documentElement.dataset.language = language;
-    document.title = language === "zh" ? "知心陪练 PeerCoach" : "PeerCoach · Peer-Support Training";
+    document.title = BRAND[language].title;
     const description = document.querySelector('meta[name="description"]');
-    if (description) description.content = language === "zh"
-      ? "知心陪练 PeerCoach——用 AI 标准化来访者训练青少年朋辈心理互助能力"
-      : "PeerCoach uses structured AI role-play to train safe, empathetic peer-support skills.";
+    if (description) description.content = BRAND[language].description;
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
@@ -313,13 +325,19 @@
     localStorage.setItem(LANGUAGE_KEY, language);
   }
 
-  function setTheme(value) {
-    theme = value === "light" || value === "dark" ? value : "system";
-    localStorage.setItem(THEME_KEY, theme);
+  function toggleTheme() {
+    theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     applyTheme();
   }
 
-  darkMedia.addEventListener("change", () => { if (theme === "system") applyTheme(); });
+  const syncWithSystem = () => {
+    theme = systemTheme();
+    applyTheme();
+  };
+  darkMedia.addEventListener("change", syncWithSystem);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") syncWithSystem();
+  });
   applyTheme();
 
   window.PeerCoachI18n = {
@@ -330,7 +348,7 @@
     localizeCase,
     localizeLesson,
     setLanguage,
-    setTheme,
+    toggleTheme,
     t,
   };
 })();

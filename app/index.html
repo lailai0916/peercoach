@@ -6,19 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f7f6">
-<meta name="description" content="PeerCoach uses structured AI role-play to train safe, empathetic peer-support skills.">
+<meta name="description" content="An AI role-play trainer for practicing peer mental-health support in Chinese schools.">
 <script>
 (() => {
-  const stored = localStorage.getItem("peercoach-theme");
-  const mode = stored === "light" || stored === "dark" ? stored : "system";
-  const resolved = mode === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+  const resolved = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   document.documentElement.dataset.language = localStorage.getItem("peercoach-language") === "zh" ? "zh" : "en";
   document.documentElement.dataset.theme = resolved;
-  document.documentElement.dataset.themeMode = mode;
   document.querySelector('meta[name="theme-color"]').content = resolved === "dark" ? "#101413" : "#f5f7f6";
 })();
 </script>
-<title>PeerCoach · Peer-Support Training</title>
+<title>PeerCoach</title>
 <style>
 :root {
   color-scheme: light;
@@ -263,8 +260,13 @@ footer.foot a { color: var(--ink-2); }
         <div class="mark" aria-hidden="true">
           <svg class="ic" viewBox="0 0 24 24"><path d="M3.5 9.5a5 5 0 0 1 5-5h7a5 5 0 0 1 5 5"/><path d="M3.5 9.5V14a2 2 0 0 0 2 2H7l2.5 3L12 16h6.5a2 2 0 0 0 2-2V9.5"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>
         </div>
-        <div><b>知心陪练</b><span>PeerCoach · 学着接住身边人</span></div>
+        <div><b>知心陪练</b><span>面向中国校园朋辈心理互助的 AI 角色扮演训练工具。</span></div>
       </div>
+      <button class="iconbtn" id="language-btn" title="切换语言" aria-label="切换语言"><span>中</span></button>
+      <button class="iconbtn" id="theme-btn" title="切换主题" aria-label="切换主题">
+        <svg class="ic" id="theme-sun" viewBox="0 0 24 24" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="ic" id="theme-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
       <button class="iconbtn" id="set-btn" title="设置" aria-label="打开设置">
         <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3 5.5 5.5"/></svg>
       </button>
@@ -442,24 +444,6 @@ footer.foot a { color: var(--ink-2); }
 <!-- 设置 -->
 <dialog id="dlg-set">
   <h2 style="font-size:16px">设置</h2>
-  <div class="grid2" style="margin-top:12px">
-    <div>
-      <label class="f" style="margin-top:0">语言</label>
-      <div class="choice" id="s-language">
-        <button type="button" data-value="en">English</button>
-        <button type="button" data-value="zh">简体中文</button>
-      </div>
-    </div>
-    <div>
-      <label class="f" style="margin-top:0">主题</label>
-      <div class="choice" id="s-theme">
-        <button type="button" data-value="system">跟随系统</button>
-        <button type="button" data-value="light">浅色</button>
-        <button type="button" data-value="dark">深色</button>
-      </div>
-    </div>
-  </div>
-  <hr class="sep">
   <p class="sub" style="margin-top:6px">默认使用内置剧本引擎(离线可用)。接入任意 OpenAI 兼容大模型后,来访者将自由对话、督导逐句实时评分。密钥仅存本机。</p>
   <label class="f" for="s-url">接口地址</label>
   <input class="input" id="s-url" placeholder="https://api.example.com/v1/chat/completions">
@@ -1137,27 +1121,15 @@ LESSONS.forEach((baseLesson, index) => {
 });
 
 /* ================= 设置 ================= */
-let pendingLanguage = I18N.language;
-let pendingTheme = I18N.theme;
-function updatePreferenceButtons() {
-  document.querySelectorAll("#s-language button").forEach(button => button.setAttribute("aria-pressed", button.dataset.value === pendingLanguage));
-  document.querySelectorAll("#s-theme button").forEach(button => button.setAttribute("aria-pressed", button.dataset.value === pendingTheme));
-}
-document.querySelectorAll("#s-language button").forEach(button => button.addEventListener("click", () => {
-  pendingLanguage = button.dataset.value;
-  updatePreferenceButtons();
-}));
-document.querySelectorAll("#s-theme button").forEach(button => button.addEventListener("click", () => {
-  pendingTheme = button.dataset.value;
-  updatePreferenceButtons();
-}));
+$("language-btn").addEventListener("click", () => {
+  I18N.setLanguage(I18N.language === "zh" ? "en" : "zh");
+  location.reload();
+});
+$("theme-btn").addEventListener("click", () => I18N.toggleTheme());
 $("set-btn").addEventListener("click", () => {
   const l = db.settings.llm || {};
   $("s-url").value = l.url || ""; $("s-key").value = l.key || ""; $("s-model").value = l.model || "";
   $("s-class").checked = !!db.settings.classroom;
-  pendingLanguage = I18N.language;
-  pendingTheme = I18N.theme;
-  updatePreferenceButtons();
   $("s-test-r").textContent = ""; $("s-case-r").textContent = "";
   $("dlg-set").showModal();
 });
@@ -1166,11 +1138,8 @@ $("s-save").addEventListener("click", () => {
   const url = $("s-url").value.trim(), key = $("s-key").value.trim(), model = $("s-model").value.trim();
   db.settings.llm = url && key ? { url, key, model: model || "gpt-4o-mini" } : null;
   db.settings.classroom = $("s-class").checked;
-  const languageChanged = pendingLanguage !== I18N.language;
-  I18N.setLanguage(pendingLanguage);
-  I18N.setTheme(pendingTheme);
   save();
-  if (languageChanged) location.reload(); else $("dlg-set").close();
+  $("dlg-set").close();
 });
 
 /* 自定义案例导入(案例工厂:大模型生成 → 老师审核 → JSON 导入) */
