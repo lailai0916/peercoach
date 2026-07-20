@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>peercoach</h1>
+  <h1>PeerCoach</h1>
   <p>English | <a href="README.zh-Hans.md">简体中文</a></p>
   <p>
     <img src="https://img.shields.io/github/last-commit/lailai0916/peercoach?style=flat-square" alt="last commit" />
@@ -10,6 +10,8 @@
 </div>
 
 ## Project Introduction
+
+An AI role-play trainer for practicing peer mental-health support in Chinese schools.
 
 **PeerCoach (知心陪练)** flips the usual mental-health chatbot: instead of the AI
 comforting a student, the AI plays a classmate confiding in you, and you practice
@@ -50,8 +52,7 @@ re-training list.
 🌐 **Bilingual Training** — English is the default; Simplified Chinese covers the
 interface, built-in cases, lessons, supervisor feedback, AI prompts, and exports.
 
-🎨 **Adaptive Themes** — Follows the system by default, with explicit light and dark
-modes stored on the device.
+🎨 **Adaptive Themes** — Follows the system by default, with a compact light/dark toggle.
 
 ## Getting Started
 
