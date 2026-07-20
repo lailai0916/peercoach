@@ -1,15 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2314796a'/%3E%3Cpath d='M16 22a10 10 0 0 1 10-10h12a10 10 0 0 1 10 10v10a7 7 0 0 1-7 7h-8l-8 9v-9h-2a7 7 0 0 1-7-7z' fill='none' stroke='white' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f7f6">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101413">
-<meta name="description" content="知心陪练 PeerCoach——用 AI 标准化来访者训练青少年朋辈心理互助能力">
-<title>知心陪练 PeerCoach</title>
+<meta name="theme-color" content="#f5f7f6">
+<meta name="description" content="PeerCoach uses structured AI role-play to train safe, empathetic peer-support skills.">
+<script>
+(() => {
+  const stored = localStorage.getItem("peercoach-theme");
+  const mode = stored === "light" || stored === "dark" ? stored : "system";
+  const resolved = mode === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+  document.documentElement.dataset.language = localStorage.getItem("peercoach-language") === "zh" ? "zh" : "en";
+  document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.themeMode = mode;
+  document.querySelector('meta[name="theme-color"]').content = resolved === "dark" ? "#101413" : "#f5f7f6";
+})();
+</script>
+<title>PeerCoach · Peer-Support Training</title>
 <style>
 :root {
+  color-scheme: light;
   --bg: #f5f7f6;
   --surface: #ffffff;
   --surface-2: #edf0ef;
@@ -30,8 +42,8 @@
   --r-s: 9px;
   --shadow: 0 1px 2px rgba(23, 27, 26, .05);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-theme="dark"] {
+    color-scheme: dark;
     --bg: #101413;
     --surface: #1a201e;
     --surface-2: #232a28;
@@ -49,9 +61,9 @@
     --ok: #74c396;
     --ok-weak: #1c2b22;
     --shadow: none;
-  }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+:root:not([data-i18n-ready]) body { visibility: hidden; }
 [hidden] { display: none !important; }
 html { height: 100%; }
 body {
@@ -115,6 +127,9 @@ dialog { border: 1px solid var(--line); border-radius: var(--r); background: var
 dialog::backdrop { background: rgba(8, 12, 11, .55); }
 label.f { display: block; font-size: 13px; color: var(--ink-2); margin: 13px 0 5px; }
 .input { width: 100%; border: 1px solid var(--line); border-radius: var(--r-s); padding: 9px 12px; background: var(--surface); font-size: 14px; }
+.choice { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+.choice button { padding: 6px 11px; border-radius: 8px; color: var(--ink-2); font-size: 12.5px; }
+.choice button[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); font-weight: 600; }
 
 /* ===== 案例库 ===== */
 #hello h1 { font-size: 21px; margin-bottom: 2px; }
@@ -427,6 +442,24 @@ footer.foot a { color: var(--ink-2); }
 <!-- 设置 -->
 <dialog id="dlg-set">
   <h2 style="font-size:16px">设置</h2>
+  <div class="grid2" style="margin-top:12px">
+    <div>
+      <label class="f" style="margin-top:0">语言</label>
+      <div class="choice" id="s-language">
+        <button type="button" data-value="en">English</button>
+        <button type="button" data-value="zh">简体中文</button>
+      </div>
+    </div>
+    <div>
+      <label class="f" style="margin-top:0">主题</label>
+      <div class="choice" id="s-theme">
+        <button type="button" data-value="system">跟随系统</button>
+        <button type="button" data-value="light">浅色</button>
+        <button type="button" data-value="dark">深色</button>
+      </div>
+    </div>
+  </div>
+  <hr class="sep">
   <p class="sub" style="margin-top:6px">默认使用内置剧本引擎(离线可用)。接入任意 OpenAI 兼容大模型后,来访者将自由对话、督导逐句实时评分。密钥仅存本机。</p>
   <label class="f" for="s-url">接口地址</label>
   <input class="input" id="s-url" placeholder="https://api.example.com/v1/chat/completions">
@@ -469,6 +502,7 @@ footer.foot a { color: var(--ink-2); }
 }
 </style>
 
+<script src="./i18n.js"></script>
 <script>
 "use strict";
 /* ================= 数据 ================= */
@@ -480,8 +514,16 @@ db.passed ||= [];          // caseId[]
 db.settings ||= {};
 const save = () => localStorage.setItem(KEY, JSON.stringify(db));
 const $ = id => document.getElementById(id);
+const I18N = window.PeerCoachI18n;
+const tr = (key, variables) => I18N.t(key, variables);
+I18N.applyStatic();
 
-const DIMS = [["listen", "倾听"], ["empathy", "共情"], ["question", "提问"], ["boundary", "边界"], ["refer", "转介"]];
+if (I18N.language === "en") {
+  document.querySelector(".mission").innerHTML = '<b>How Training Works</b>: AI plays a classmate with a private story. Every response changes their <b>trust</b>—empathy helps them open up, while judgment and lectures close the door. A supervisor observes throughout and gives a professional review at the end.';
+  document.querySelector("footer.foot").innerHTML = 'PeerCoach trains <b>support and referral</b>, not psychological treatment. When a classmate’s situation is beyond what you can carry, you can always say: “Let’s find a trusted adult together.”<br>Emergency support: <a href="tel:12355">12355</a> National Youth Service Hotline · <a href="tel:12356">12356</a> National Mental Health Hotline (24 hours)';
+}
+
+const DIMS = I18N.dims();
 
 /* ================= 案例库 =================
    每幕 beat:
@@ -661,8 +703,9 @@ function bestScore(id) {
 function renderCases() {
   const list = $("case-list");
   list.innerHTML = "";
-  CASES.forEach(c => {
-    const un = unlocked(c);
+  CASES.forEach(baseCase => {
+    const un = unlocked(baseCase);
+    const c = I18N.localizeCase(baseCase);
     const b = document.createElement("button");
     b.className = "case" + (un ? "" : " locked");
     b.disabled = !un;
@@ -670,12 +713,12 @@ function renderCases() {
     b.innerHTML = `
       <div class="top"><div class="ava">${c.ava}</div>
         <div><b>${c.name}${c.crisis ? " ⚠" : ""}</b><span class="who">${c.who}</span></div>
-        <span class="best">${best !== null ? "最佳 " + best : ""}</span></div>
+        <span class="best">${best !== null ? tr("best", { score: best }) : ""}</span></div>
       <p>${c.brief}</p>
       <div class="foot">
         <span class="tag acc">Lv.${c.level}</span>
-        ${c.crisis ? '<span class="tag dgr">危机识别考核</span>' : ""}
-        ${db.passed.includes(c.id) ? '<span class="tag ok">已通关 ✓</span>' : (un ? '<span class="tag">未通关</span>' : '<span class="tag">通关上一关解锁</span>')}
+        ${c.crisis ? `<span class="tag dgr">${tr("crisisAssessment")}</span>` : ""}
+        ${db.passed.includes(c.id) ? `<span class="tag ok">${tr("passed")}</span>` : (un ? `<span class="tag">${tr("notPassed")}</span>` : `<span class="tag">${tr("unlockPrevious")}</span>`)}
       </div>`;
     if (un) b.addEventListener("click", () => openBrief(c));
     list.appendChild(b);
@@ -707,12 +750,12 @@ function addMsg(text, who) {
 function addWhisper(text, delta) {
   const d = document.createElement("div");
   d.className = "whisper";
-  d.innerHTML = `<svg class="ic" viewBox="0 0 24 24"><path d="M12 4L3 8.5 12 13l9-4.5L12 4z"/><path d="M6 10.8V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.2"/></svg><span class="d">督导</span><span>${text}${delta ? `(信任 ${delta > 0 ? "+" : ""}${delta})` : ""}</span>`;
+  d.innerHTML = `<svg class="ic" viewBox="0 0 24 24"><path d="M12 4L3 8.5 12 13l9-4.5L12 4z"/><path d="M6 10.8V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.2"/></svg><span class="d">${tr("supervisor")}</span><span>${text}${delta ? ` (${tr("trustDelta", { value: (delta > 0 ? "+" : "") + delta })})` : ""}</span>`;
   if (db.settings.classroom) {
     // 课堂模式:点评先隐藏,全班讨论后揭晓
     const btn = document.createElement("button");
     btn.className = "reveal-btn";
-    btn.textContent = "督导点评已生成 · 全班讨论后点击揭晓";
+    btn.textContent = tr("revealFeedback");
     btn.addEventListener("click", () => { btn.replaceWith(d); d.scrollIntoView({ block: "end" }); });
     log.appendChild(btn);
     btn.scrollIntoView({ block: "end" });
@@ -739,7 +782,7 @@ function setTrust(v) {
   S.trust = Math.max(0, Math.min(100, v));
   $("trust-fill").style.width = S.trust + "%";
   $("trust-bar").setAttribute("aria-valuenow", S.trust);
-  $("trust-state").textContent = S.trust < 30 ? "防御中" : S.trust < 60 ? "试探中" : "敞开了";
+  $("trust-state").textContent = S.trust < 30 ? tr("trustGuarded") : S.trust < 60 ? tr("trustTesting") : tr("trustOpen");
   $("trust-fill").style.background = S.trust < 30 ? "var(--danger)" : S.trust < 60 ? "var(--gold)" : "var(--accent)";
 }
 function startSession(c) {
@@ -754,7 +797,7 @@ function startSession(c) {
   setTrust(c.trust0);
   go("session");
   if (S.llm) return startLLMSession(c);
-  addSys(`会谈开始 · ${c.who} · 训练目标:${c.goal}`);
+  addSys(tr("sessionStart", { who: c.who, goal: c.goal }));
   nextBeat();
 }
 
@@ -773,6 +816,15 @@ async function llmCall(messages, { json = false, maxTokens = 400, temperature = 
   return (j.choices?.[0]?.message?.content || "").trim();
 }
 function casePrompt(c) {
+  if (I18N.language === "en") return `You are role-playing a secondary-school student confiding in a classmate (the user) in a peer-support training system.
+Character: ${c.name}, ${c.who}. Context: ${c.brief}
+The character has deeper concerns that should emerge gradually only when the user listens, empathizes, and asks appropriate questions.
+${c.crisis ? "Important: as trust grows, express thoughts such as life feeling pointless or not wanting to wake up, but never describe a method, tool, or plan for self-harm. If the user responds calmly and offers to go with you to a trusted adult, hesitate and then agree. If they panic, dismiss, or silence you, withdraw." : ""}
+Rules:
+1. Reply in one short, natural, emotional paragraph of no more than 45 English words.
+2. Open up when the user listens and empathizes; become guarded when they lecture, judge, or dismiss.
+3. Stay in character. Do not explain the exercise or score the user.
+4. Output only the student's spoken words, with no narration or quotation marks.`;
   return `你在一个青少年朋辈心理互助训练系统里,扮演一位前来向同学(用户)倾诉的中学生。
 人物设定:${c.name},${c.who}。背景情境:${c.brief}
 本案例的隐藏心事(只有当用户让你感到被理解、信任足够高时,才逐步吐露,不要一上来全说):这位同学表面在说眼前的事,内心真正的困扰需要用户用心倾听、共情、恰当提问才会显露。
@@ -784,21 +836,21 @@ ${c.crisis ? "重要:随着交流深入,你会流露出「活着没意思/不想
 4. 只输出这位同学要说的话本身,不要加任何旁白或引号。`;
 }
 async function startLLMSession(c) {
-  addSys(`会谈开始 · ${c.who} · 训练目标:${c.goal} · 由大模型实时驱动`);
+  addSys(tr("sessionStartAI", { who: c.who, goal: c.goal }));
   renderLLMInput();
   const t = typing();
   try {
     const opener = await llmCall([
       { role: "system", content: casePrompt(c) },
-      { role: "user", content: "(对话开始,请你作为这位同学,说出你走过来想倾诉的第一句话。)" },
+      { role: "user", content: I18N.language === "en" ? "Begin the conversation with the first thing this student wants to confide." : "（对话开始，请你作为这位同学，说出你走过来想倾诉的第一句话。）" },
     ], { maxTokens: 120, temperature: 0.9 });
     t.remove();
     S.history.push({ role: "assistant", content: opener });
     addMsg(opener, "them");
   } catch (e) {
     t.remove();
-    addSys("大模型连接失败(" + e.message + "),已回退到剧本模式。");
-    S.llm = false; $("opts").innerHTML = ""; addSys(`训练目标:${c.goal}`); nextBeat();
+    addSys(tr("aiFallback", { error: e.message }));
+    S.llm = false; $("opts").innerHTML = ""; addSys(tr("goal", { goal: c.goal })); nextBeat();
   }
 }
 function renderLLMInput() {
@@ -806,13 +858,15 @@ function renderLLMInput() {
   box.innerHTML = "";
   const row = document.createElement("div");
   row.className = "row";
-  row.innerHTML = `<input class="input" id="free-in" placeholder="用你自己的话回应 TA…" maxlength="200"><button class="btn pri" id="free-go">发送</button>`;
+  row.innerHTML = `<input class="input" id="free-in" placeholder="${tr("ownReply")}" maxlength="200"><button class="btn pri" id="free-go">${tr("send")}</button>`;
   box.appendChild(row);
   const go = () => llmUserTurn();
   row.querySelector("#free-go").addEventListener("click", go);
   row.querySelector("#free-in").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
 }
-const JUDGE_SYS = `你是青少年朋辈互助训练系统里的督导老师。用户是正在练习"如何回应同学倾诉"的学生。请你只针对"用户这一句回应"打分,依据五个维度:listen(倾听)、empathy(共情)、question(提问)、boundary(边界:不说教/不评判/不越位)、refer(转介:危机时是否连接大人)。
+const judgePrompt = () => I18N.language === "en" ? `You are a supervisor in a youth peer-support training system. Score only the user's latest response using five dimensions: listen, empathy, question, boundary (no lecturing, judging, or overstepping), and refer (connecting to an adult during a crisis).
+Output only one JSON object: {"dim":"the most relevant dimension","score":0|1|2,"comment":"an English comment under 30 words that identifies what worked or did not and suggests a better response","crisis_mishandled":true|false}.
+Score 2 means strong, 1 means developing, and 0 means needs adjustment. crisis_mishandled is true only after a crisis signal when the user silences, minimizes, dismisses, or avoids it.` : `你是青少年朋辈互助训练系统里的督导老师。用户是正在练习"如何回应同学倾诉"的学生。请你只针对"用户这一句回应"打分,依据五个维度:listen(倾听)、empathy(共情)、question(提问)、boundary(边界:不说教/不评判/不越位)、refer(转介:危机时是否连接大人)。
 只输出一个 JSON 对象,格式:{"dim":"五个维度里最相关的一个","score":0或1或2,"comment":"30字内中文点评,先说这句好在哪或问题在哪,再给一句更好的说法","crisis_mishandled":true或false}
 score:2=很稳,1=还不错,0=需要调整。crisis_mishandled 仅当对话已出现消极/危机信号、而用户这句是堵嘴/轻描淡写/敷衍/回避时为 true,否则 false。`;
 async function llmUserTurn() {
@@ -824,39 +878,39 @@ async function llmUserTurn() {
   addMsg(text, "me");
   inp.value = "";
   S.history.push({ role: "user", content: text });
-  const convo = S.history.map(m => (m.role === "user" ? "用户回应:" : "同学说:") + m.content).join("\n");
+  const convo = S.history.map(m => (m.role === "user" ? (I18N.language === "en" ? "User response: " : "用户回应：") : (I18N.language === "en" ? "Student: " : "同学说：")) + m.content).join("\n");
   const t = typing();
   try {
     // 督导评分(JSON) + 来访者回应,两路并发
     const [judgeRaw, reply] = await Promise.all([
       llmCall([
-        { role: "system", content: JUDGE_SYS },
-        { role: "user", content: "对话记录:\n" + convo + "\n\n请只对最后一句「用户回应」打分。" },
+        { role: "system", content: judgePrompt() },
+        { role: "user", content: (I18N.language === "en" ? "Conversation:\n" + convo + "\n\nScore only the final user response." : "对话记录：\n" + convo + "\n\n请只对最后一句“用户回应”打分。") },
       ], { json: true, maxTokens: 150, temperature: 0.2 }),
       llmCall([
-        { role: "system", content: casePrompt(S.c) + `\n\n当前你对用户的信任程度约为 ${S.trust}/100(越高越愿意敞开)。` },
+        { role: "system", content: casePrompt(S.c) + (I18N.language === "en" ? `\n\nYour trust in the user is about ${S.trust}/100; higher trust means greater openness.` : `\n\n当前你对用户的信任程度约为 ${S.trust}/100（越高越愿意敞开）。`) },
         ...S.history.map(m => ({ role: m.role, content: m.content })),
       ], { maxTokens: 120, temperature: 0.9 }),
     ]);
     t.remove();
-    let j; try { j = JSON.parse(judgeRaw); } catch { j = { dim: "listen", score: 1, comment: "已记录。", crisis_mishandled: false }; }
+    let j; try { j = JSON.parse(judgeRaw); } catch { j = { dim: "listen", score: 1, comment: tr("recorded"), crisis_mishandled: false }; }
     const q = [0, 1, 2].includes(j.score) ? j.score : 1;
     const dim = DIMS.some(([k]) => k === j.dim) ? j.dim : "listen";
     const delta = q === 2 ? 9 : q === 1 ? 2 : -9;
-    applyScore(dim, q, text, j.comment || "已记录。", delta);
+    applyScore(dim, q, text, j.comment || tr("recorded"), delta);
     if (S.c.crisis && (j.crisis_mishandled || (dim === "refer" && q === 2))) S.referOk = !j.crisis_mishandled && dim === "refer" && q === 2;
     S.history.push({ role: "assistant", content: reply });
     addMsg(reply, "them");
     S.turns = (S.turns || 0) + 1;
-    if (S.trust <= 8) { addSys("TA 收回了话头,会谈中止"); return endSession(true); }
+    if (S.trust <= 8) { addSys(tr("studentWithdrew")); return endSession(true); }
   } catch (e) {
     t.remove();
-    addSys("大模型请求失败:" + e.message + "(可重试或点「结束会谈」出报告)");
+    addSys(tr("aiRequestFailed", { error: e.message }));
   } finally {
     S.busy = false;
   }
 }
-function beatLabel() { $("s-who").textContent = `${S.c.who.split(" · ")[0]} · 第 ${S.beat + 1} 幕`; }
+function beatLabel() { $("s-who").textContent = `${S.c.who.split(" · ")[0]} · ${tr("act", { number: S.beat + 1 })}`; }
 function nextBeat() {
   if (S.beat >= S.c.beats.length) return endSession();
   beatLabel();
@@ -865,7 +919,7 @@ function nextBeat() {
   setTimeout(() => {
     t.remove();
     addMsg(b.them[S.trust >= 55 ? 1 : 0], "them");
-    if (b.crisis) addSys("⚠ 危机信号出现——回想「危机信号清单」那节课");
+    if (b.crisis) addSys(tr("crisisSignal"));
     renderOps(b);
   }, 600);
 }
@@ -882,7 +936,7 @@ function renderOps(b) {
   });
   const row = document.createElement("div");
   row.className = "row";
-  row.innerHTML = `<input class="input" id="free-in" placeholder="或者,用你自己的话回应…" maxlength="200"><button class="btn pri" id="free-go">发送</button>`;
+  row.innerHTML = `<input class="input" id="free-in" placeholder="${tr("orOwnReply")}" maxlength="200"><button class="btn pri" id="free-go">${tr("send")}</button>`;
   box.appendChild(row);
   row.querySelector("#free-go").addEventListener("click", freeReply);
   row.querySelector("#free-in").addEventListener("keydown", e => { if (e.key === "Enter") freeReply(); });
@@ -894,17 +948,17 @@ function choose(o) {
   applyScore(o.dim, o.q, o.t, o.fb, delta);
   setTimeout(() => { S.beat++; nextBeat(); }, 900);
 }
-const JUDGE_RE = /(想开点|别想太多|你应该|你怎么能|矫情|至于吗|小题大做|这有什么|想太多|振作|坚强点|别乱想)/;
-const EMP_RE = /(听起来|你感觉|我在听|辛苦你了|这确实|不容易|我陪你|谢谢你告诉我|换成是我)/;
-const REFER_RE = /(心理老师|老师|12355|12356|一起去|找大人|告诉家长|辅导室)/;
+const JUDGE_RE = /(想开点|别想太多|你应该|你怎么能|矫情|至于吗|小题大做|这有什么|想太多|振作|坚强点|别乱想|cheer up|overthinking|you should|just get over|not a big deal|be strong)/i;
+const EMP_RE = /(听起来|你感觉|我在听|辛苦你了|这确实|不容易|我陪你|谢谢你告诉我|换成是我|it sounds|you feel|i(?:'|’)m listening|that sounds hard|i(?:'|’)ll stay|thank you for telling me)/i;
+const REFER_RE = /(心理老师|老师|12355|12356|一起去|找大人|告诉家长|辅导室|counselor|teacher|trusted adult|tell (?:your )?(?:parent|guardian)|go with you)/i;
 // 本人真实困扰兜底:当练习者用第一人称流露真实自伤念头(而非扮演回应)时,跳出训练、给出求助渠道
-const SELF_CRISIS_RE = /我(自己)?(也|都|真的|有时候|现在|好像)*(不想活|想死|想消失|不想再活|活着没意思|活着没意义|撑不下去|想自杀|想伤害自己|想割腕|好想消失|不想醒)/;
+const SELF_CRISIS_RE = /(?:我(自己)?(也|都|真的|有时候|现在|好像)*(不想活|想死|想消失|不想再活|活着没意思|活着没意义|撑不下去|想自杀|想伤害自己|想割腕|好想消失|不想醒)|\bI\b.{0,28}\b(?:want to die|want to disappear|don['’]?t want to live|kill myself|hurt myself|self-harm|not wake up|can['’]?t go on)\b)/i;
 function selfCrisisGuard(t) {
   if (!SELF_CRISIS_RE.test(t)) return false;
   const d = document.createElement("div");
   d.className = "msg them crisis";
   d.style.cssText = "border:1px solid var(--danger);background:var(--danger-weak);align-self:stretch;max-width:100%";
-  d.innerHTML = `<b style="color:var(--danger)">⚠ 这不是训练的一部分——如果你现在真的很难受</b><br>谢谢你说出来,这很重要。你此刻的感受值得被认真对待。请立刻联系可信任的大人,或拨打:<br>· 全国青少年服务台 <b>12355</b><br>· 全国心理援助热线 <b>12356</b>(24 小时)<br>· 紧急情况 110 / 120<br>训练可以先放一放,你自己更重要。`;
+  d.innerHTML = `<b style="color:var(--danger)">${tr("emergencyTitle")}</b><br>${tr("emergencyBody")}`;
   log.appendChild(d);
   d.scrollIntoView({ block: "end" });
   return true;
@@ -917,12 +971,12 @@ function freeReply() {
   addMsg(t, "me");
   $("opts").innerHTML = "";
   const b = S.c.beats[S.beat];
-  let dim = "listen", q = 1, fb = "中性的回应。试试加一句情绪命名,比如「听起来……」。", delta = 1;
-  if (JUDGE_RE.test(t)) { q = 0; delta = -9; fb = "这句里有评判或说教的影子,TA 的门会关上一点。回想「三不原则」。"; }
-  else if (b.crisis && REFER_RE.test(t)) { dim = "refer"; q = 2; delta = 9; fb = "你识别了危机并选择连接大人——这是本关最重要的一步。"; }
-  else if (b.crisis) { dim = "refer"; q = 0; delta = -9; fb = "危机信号出现时,任何「继续聊」都不够——必须连接可信任的大人。"; }
-  else if (EMP_RE.test(t)) { dim = "empathy"; q = 2; delta = 8; fb = "有共情反映的影子,很好。"; }
-  else if (/[??]$/.test(t)) { dim = "question"; q = 2; delta = 6; fb = "开放式提问,把话筒递回给 TA。"; }
+  let dim = "listen", q = 1, fb = tr("neutralFeedback"), delta = 1;
+  if (JUDGE_RE.test(t)) { q = 0; delta = -9; fb = tr("judgingFeedback"); }
+  else if (b.crisis && REFER_RE.test(t)) { dim = "refer"; q = 2; delta = 9; fb = tr("referralFeedback"); }
+  else if (b.crisis) { dim = "refer"; q = 0; delta = -9; fb = tr("missedCrisisFeedback"); }
+  else if (EMP_RE.test(t)) { dim = "empathy"; q = 2; delta = 8; fb = tr("empathyFeedback"); }
+  else if (/[?？]$/.test(t)) { dim = "question"; q = 2; delta = 6; fb = tr("questionFeedback"); }
   applyScore(dim, q, t, fb, delta);
   setTimeout(() => { S.beat++; nextBeat(); }, 900);
 }
@@ -943,7 +997,7 @@ function endSession(early) {
     t.remove();
     addMsg(early ? S.c.endBad : (pass || S.trust >= 55 ? S.c.endGood : S.c.endBad), "them");
     if (!pass && S.c.crisis && S.c.endBadNote) addSys(S.c.endBadNote);
-    addSys("会谈结束");
+    addSys(tr("sessionEnded"));
     showReport(pass);
   }, 700);
 }
@@ -956,7 +1010,7 @@ function radarSVG(dims, size) {
   const ring = f => DIMS.map((_, i) => pt(i, R * f).join(",")).join(" ");
   const vals = DIMS.map(([k]) => dims[k] && dims[k].max ? dims[k].pts / dims[k].max : 0);
   const dataPts = DIMS.map((_, i) => pt(i, R * Math.max(.06, vals[i])).join(",")).join(" ");
-  return `<svg class="chart" viewBox="0 0 ${size} ${size}" role="img" aria-label="五维能力雷达图">` +
+  return `<svg class="chart" viewBox="0 0 ${size} ${size}" role="img" aria-label="${tr("radarLabel")}">` +
     [1, .66, .33].map(f => `<polygon points="${ring(f)}" fill="none" stroke="var(--line)"/>`).join("") +
     DIMS.map((_, i) => { const [x, y] = pt(i, R); return `<line x1="${C}" y1="${C}" x2="${x}" y2="${y}" stroke="var(--line)"/>`; }).join("") +
     `<polygon points="${dataPts}" fill="var(--accent-weak)" stroke="var(--accent)" stroke-width="1.8"/>` +
@@ -969,22 +1023,20 @@ function showReport(pass) {
   const score = Math.round(totalPts / totalMax * 100);
   $("r-score").innerHTML = `${score}<small> / 100</small>`;
   const badge = $("r-badge");
-  if (pass) { badge.className = "tag ok"; badge.textContent = "通关 ✓"; }
-  else if (S.c.crisis && S.referOk === false) { badge.className = "tag dgr"; badge.textContent = "未通关 · 危机应对不当"; }
-  else { badge.className = "tag"; badge.textContent = "未通关 · 信任不足"; }
+  if (pass) { badge.className = "tag ok"; badge.textContent = tr("passed"); }
+  else if (S.c.crisis && S.referOk === false) { badge.className = "tag dgr"; badge.textContent = tr("failedCrisis"); }
+  else { badge.className = "tag"; badge.textContent = tr("failedTrust"); }
   $("r-radar").innerHTML = radarSVG(S.dims, 210);
   const weak = DIMS.filter(([k]) => S.dims[k].max && S.dims[k].pts / S.dims[k].max < .6).map(([, n]) => n);
   $("r-comment").textContent = pass
-    ? `${S.c.name} 在会谈结束时选择了信任你。${weak.length ? "下一步重点练:" + weak.join("、") + "。" : "五个维度都在线,可以挑战下一关了。"}`
-    : (S.c.crisis && S.referOk === false
-      ? "记住这次的感觉:危机信号出现后,唯一正确的方向是「立刻连接大人」。重新来一次,把这条路走对。"
-      : "TA 最终没有敞开。回看下面的复盘,找找是哪几句把门关上的。");
+    ? tr("trustedReport", { name: S.c.name, next: weak.length ? tr("nextFocus", { dimensions: weak.join(I18N.language === "en" ? ", " : "、") }) : tr("allDimensions") })
+    : (S.c.crisis && S.referOk === false ? tr("crisisReport") : tr("trustReport"));
   const rp = $("r-replay");
   rp.innerHTML = "";
   S.replay.forEach(r => {
     const d = document.createElement("div");
     d.className = "it " + (r.q === 2 ? "good" : r.q === 0 ? "bad" : "");
-    d.innerHTML = `<p class="you">第${r.beat}幕 · 你:${r.you}</p><p class="note">督导:${r.fb}</p>`;
+    d.innerHTML = `<p class="you">${tr("replay", { act: r.beat, text: r.you })}</p><p class="note">${tr("replaySupervisor", { text: r.fb })}</p>`;
     rp.appendChild(d);
   });
   db.sessions.push({ ts: Date.now(), caseId: S.c.id, score, pass, referOk: S.referOk ?? null,
@@ -1018,13 +1070,13 @@ function renderGrow() {
   db.sessions.slice(-8).forEach(s => DIMS.forEach(([k]) => {
     if (s.dims[k]) { agg[k].pts += s.dims[k].pts; agg[k].max += s.dims[k].max; }
   }));
-  $("radar-wrap").innerHTML = db.sessions.length ? radarSVG(agg, 230) : '<p class="sub" style="text-align:center;padding:20px 0">完成一次会谈后生成</p>';
+  $("radar-wrap").innerHTML = db.sessions.length ? radarSVG(agg, 230) : `<p class="sub" style="text-align:center;padding:20px 0">${tr("completeForRadar")}</p>`;
 
   const data = db.sessions.slice(-15);
-  if (data.length < 2) { $("line-wrap").innerHTML = '<p class="sub" style="text-align:center;padding:20px 0">至少两次会谈后生成</p>'; return; }
+  if (data.length < 2) { $("line-wrap").innerHTML = `<p class="sub" style="text-align:center;padding:20px 0">${tr("twoForLine")}</p>`; return; }
   const W = 340, H = 200, PL = 30, PR = 8, PT = 10, PB = 22, iw = W - PL - PR, ih = H - PT - PB;
   const x = i => PL + i * iw / (data.length - 1), y = s => PT + ih - s / 100 * ih;
-  $("line-wrap").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="历次会谈得分曲线">` +
+  $("line-wrap").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tr("lineLabel")}">` +
     [0, 50, 100].map(g => `<line x1="${PL}" y1="${y(g)}" x2="${W - PR}" y2="${y(g)}" stroke="var(--line)"/><text x="${PL - 6}" y="${y(g) + 4}" text-anchor="end" font-size="10" fill="var(--ink-3)">${g}</text>`).join("") +
     `<polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${data.map((d, i) => x(i).toFixed(1) + "," + y(d.score).toFixed(1)).join(" ")}"/>` +
     data.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.score)}" r="3.2" fill="${d.pass ? "var(--accent)" : "var(--ink-3)"}"/>`).join("") +
@@ -1035,7 +1087,7 @@ $("csv-btn").addEventListener("click", () => {
   db.sessions.forEach(s => {
     const d = new Date(s.ts);
     rows.push([`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-      CASES.find(c => c.id === s.caseId)?.name || s.caseId, s.score, s.pass, s.referOk ?? "",
+      (() => { const c = CASES.find(item => item.id === s.caseId); return c ? I18N.localizeCase(c).name : s.caseId; })(), s.score, s.pass, s.referOk ?? "",
       ...DIMS.map(([k]) => s.dims[k] ? `${s.dims[k].pts}/${s.dims[k].max}` : "")]);
   });
   const a = document.createElement("a");
@@ -1046,26 +1098,31 @@ $("csv-btn").addEventListener("click", () => {
 $("print-btn").addEventListener("click", () => {
   const d = new Date();
   const crisisTries = db.sessions.filter(s => s.referOk !== null);
+  const dateLabel = new Intl.DateTimeFormat(I18N.language === "zh" ? "zh-CN" : "en-US", { dateStyle: "long" }).format(d);
+  const headings = I18N.language === "en"
+    ? { sessions: "Completed Sessions", cases: "Cases Passed", average: "Average Score", crisis: "Crisis Accuracy", case: "Case", score: "Score", result: "Result" }
+    : { sessions: "完成会谈", cases: "通关案例", average: "平均得分", crisis: "危机识别正确率", case: "案例", score: "得分", result: "结果" };
   $("print-area").hidden = false;
   $("print-area").innerHTML = `
-    <h1>知心陪练 · 朋辈互助训练档案</h1>
-    <p class="note">生成日期:${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 本档案由训练系统自动生成,可作为心理委员培训记录</p>
-    <h2>总览</h2>
-    <table><tr><th>完成会谈</th><th>通关案例</th><th>平均得分</th><th>危机识别正确率</th></tr>
+    <h1>${tr("printTitle")}</h1>
+    <p class="note">${tr("generatedDate", { date: dateLabel })}</p>
+    <h2>${tr("overview")}</h2>
+    <table><tr><th>${headings.sessions}</th><th>${headings.cases}</th><th>${headings.average}</th><th>${headings.crisis}</th></tr>
     <tr><td>${db.sessions.length}</td><td>${db.passed.length} / ${CASES.length}</td>
     <td>${db.sessions.length ? Math.round(db.sessions.reduce((a, b) => a + b.score, 0) / db.sessions.length) : "–"}</td>
-    <td>${crisisTries.length ? Math.round(crisisTries.filter(s => s.referOk).length / crisisTries.length * 100) + "%" : "未考核"}</td></tr></table>
-    <h2>会谈明细(最近 12 次)</h2>
-    <table><tr><th>案例</th><th>得分</th><th>结果</th></tr>
-    ${db.sessions.slice(-12).map(s => `<tr><td>${CASES.find(c => c.id === s.caseId)?.name || ""}</td><td>${s.score}</td><td>${s.pass ? "通关" : "未通关"}</td></tr>`).join("")}</table>
-    <p class="note" style="margin-top:12px">说明:训练内容为倾听、共情、提问、边界与转介五项朋辈互助基础能力。本训练不构成任何心理治疗资质。</p>`;
+    <td>${crisisTries.length ? Math.round(crisisTries.filter(s => s.referOk).length / crisisTries.length * 100) + "%" : tr("noAssessment")}</td></tr></table>
+    <h2>${tr("sessionDetails")}</h2>
+    <table><tr><th>${headings.case}</th><th>${headings.score}</th><th>${headings.result}</th></tr>
+    ${db.sessions.slice(-12).map(s => { const c = CASES.find(item => item.id === s.caseId); return `<tr><td>${c ? I18N.localizeCase(c).name : ""}</td><td>${s.score}</td><td>${s.pass ? tr("passed") : tr("notPassed")}</td></tr>`; }).join("")}</table>
+    <p class="note" style="margin-top:12px">${tr("recordNote")}</p>`;
   window.print();
   $("print-area").hidden = true;
 });
 
 /* ================= 学堂 ================= */
 const lessonsBox = $("lessons");
-LESSONS.forEach(L => {
+LESSONS.forEach((baseLesson, index) => {
+  const L = I18N.localizeLesson(baseLesson, index);
   const d = document.createElement("div");
   d.className = "lesson";
   d.innerHTML = `<button aria-expanded="false">
@@ -1080,10 +1137,27 @@ LESSONS.forEach(L => {
 });
 
 /* ================= 设置 ================= */
+let pendingLanguage = I18N.language;
+let pendingTheme = I18N.theme;
+function updatePreferenceButtons() {
+  document.querySelectorAll("#s-language button").forEach(button => button.setAttribute("aria-pressed", button.dataset.value === pendingLanguage));
+  document.querySelectorAll("#s-theme button").forEach(button => button.setAttribute("aria-pressed", button.dataset.value === pendingTheme));
+}
+document.querySelectorAll("#s-language button").forEach(button => button.addEventListener("click", () => {
+  pendingLanguage = button.dataset.value;
+  updatePreferenceButtons();
+}));
+document.querySelectorAll("#s-theme button").forEach(button => button.addEventListener("click", () => {
+  pendingTheme = button.dataset.value;
+  updatePreferenceButtons();
+}));
 $("set-btn").addEventListener("click", () => {
   const l = db.settings.llm || {};
   $("s-url").value = l.url || ""; $("s-key").value = l.key || ""; $("s-model").value = l.model || "";
   $("s-class").checked = !!db.settings.classroom;
+  pendingLanguage = I18N.language;
+  pendingTheme = I18N.theme;
+  updatePreferenceButtons();
   $("s-test-r").textContent = ""; $("s-case-r").textContent = "";
   $("dlg-set").showModal();
 });
@@ -1092,7 +1166,11 @@ $("s-save").addEventListener("click", () => {
   const url = $("s-url").value.trim(), key = $("s-key").value.trim(), model = $("s-model").value.trim();
   db.settings.llm = url && key ? { url, key, model: model || "gpt-4o-mini" } : null;
   db.settings.classroom = $("s-class").checked;
-  save(); $("dlg-set").close();
+  const languageChanged = pendingLanguage !== I18N.language;
+  I18N.setLanguage(pendingLanguage);
+  I18N.setTheme(pendingTheme);
+  save();
+  if (languageChanged) location.reload(); else $("dlg-set").close();
 });
 
 /* 自定义案例导入(案例工厂:大模型生成 → 老师审核 → JSON 导入) */
@@ -1111,31 +1189,31 @@ $("s-case").addEventListener("change", e => {
     try {
       const arr = [].concat(JSON.parse(rd.result));
       const ok = arr.filter(validCase);
-      if (!ok.length) { $("s-case-r").textContent = "格式不符合《案例编写规范》"; return; }
+      if (!ok.length) { $("s-case-r").textContent = tr("invalidCase"); return; }
       db.settings.customCases = (db.settings.customCases || []).filter(x => !ok.some(n => n.id === x.id)).concat(ok);
       save();
-      ok.forEach(c => { if (!CASES.some(x => x.id === c.id)) CASES.push({ ...c, custom: true, level: c.level || 1, who: c.who || "自定义案例", ava: c.ava || c.name[0] }); });
-      $("s-case-r").textContent = `已导入 ${ok.length} 个案例 ✓`;
+      ok.forEach(c => { if (!CASES.some(x => x.id === c.id)) CASES.push({ ...c, custom: true, level: c.level || 1, who: c.who || tr("customCase"), ava: c.ava || c.name[0] }); });
+      $("s-case-r").textContent = tr("importedCases", { count: ok.length });
       renderCases();
-    } catch { $("s-case-r").textContent = "JSON 解析失败"; }
+    } catch { $("s-case-r").textContent = tr("invalidJson"); }
   };
   rd.readAsText(f);
   e.target.value = "";
 });
 $("s-test").addEventListener("click", async () => {
   const r = $("s-test-r");
-  r.textContent = "测试中…";
+  r.textContent = tr("testing");
   try {
     const res = await fetch($("s-url").value.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + $("s-key").value.trim() },
-      body: JSON.stringify({ model: $("s-model").value.trim() || "gpt-4o-mini", messages: [{ role: "user", content: "回复:ok" }], max_tokens: 5 }),
+      body: JSON.stringify({ model: $("s-model").value.trim() || "gpt-4o-mini", messages: [{ role: "user", content: "Reply with: ok" }], max_tokens: 5 }),
     });
-    r.textContent = res.ok ? "连接成功 ✓" : "失败:HTTP " + res.status;
-  } catch (e) { r.textContent = "失败:" + e.message; }
+    r.textContent = res.ok ? tr("connected") : tr("failedHttp", { status: res.status });
+  } catch (e) { r.textContent = tr("failed", { error: e.message }); }
 });
 $("s-wipe").addEventListener("click", () => {
-  if (confirm("确定清空本设备上的全部训练数据?此操作不可恢复。")) { localStorage.removeItem(KEY); location.reload(); }
+  if (confirm(tr("wipeConfirm"))) { localStorage.removeItem(KEY); location.reload(); }
 });
 
 /* ================= 教师端班级看板 ================= */
@@ -1162,9 +1240,9 @@ $("t-files").addEventListener("change", async e => {
     if (s) loaded.push(s);
   }
   e.target.value = "";
-  if (!loaded.length) { $("t-status").textContent = "未识别到有效档案(需为本系统导出的 CSV)"; return; }
+  if (!loaded.length) { $("t-status").textContent = tr("invalidArchive"); return; }
   tStudents = loaded;
-  $("t-status").textContent = `已导入 ${loaded.length} 名学生`;
+  $("t-status").textContent = tr("importedStudents", { count: loaded.length });
   renderTeach();
 });
 $("t-demo").addEventListener("click", () => {
@@ -1172,14 +1250,14 @@ $("t-demo").addEventListener("click", () => {
     case: "c1", score: sc, pass, referOk: ref,
     dims: { listen: { pts: l2, max: 8 }, empathy: { pts: e2, max: 8 }, question: { pts: 5, max: 8 }, boundary: { pts: 5, max: 8 }, refer: { pts: ref === null ? 4 : ref ? 8 : 2, max: 8 } } })) });
   tStudents = [
-    mk("学生01(演示)", [[55, false, null, 4, 5], [72, true, null, 6, 6], [88, true, true, 7, 7]]),
-    mk("学生02(演示)", [[48, false, null, 3, 4], [63, true, false, 5, 5]]),
-    mk("学生03(演示)", [[70, true, null, 6, 5], [85, true, true, 7, 7]]),
-    mk("学生04(演示)", [[40, false, null, 3, 3]]),
-    mk("学生05(演示)", [[66, true, null, 5, 6], [79, true, false, 6, 6], [91, true, true, 8, 7]]),
-    mk("学生06(演示)", [[58, false, null, 4, 4], [74, true, true, 6, 6]]),
+    mk(tr("demoStudent", { number: "01" }), [[55, false, null, 4, 5], [72, true, null, 6, 6], [88, true, true, 7, 7]]),
+    mk(tr("demoStudent", { number: "02" }), [[48, false, null, 3, 4], [63, true, false, 5, 5]]),
+    mk(tr("demoStudent", { number: "03" }), [[70, true, null, 6, 5], [85, true, true, 7, 7]]),
+    mk(tr("demoStudent", { number: "04" }), [[40, false, null, 3, 3]]),
+    mk(tr("demoStudent", { number: "05" }), [[66, true, null, 5, 6], [79, true, false, 6, 6], [91, true, true, 8, 7]]),
+    mk(tr("demoStudent", { number: "06" }), [[58, false, null, 4, 4], [74, true, true, 6, 6]]),
   ];
-  $("t-status").textContent = "已载入演示数据(6 名虚拟学生)";
+  $("t-status").textContent = tr("demoLoaded");
   renderTeach();
 });
 function renderTeach() {
@@ -1189,7 +1267,7 @@ function renderTeach() {
   $("t-sess").textContent = all.length;
   $("t-avg").textContent = all.length ? Math.round(all.reduce((a, b) => a + b.score, 0) / all.length) : "–";
   const crisis = all.filter(s => s.referOk !== null);
-  $("t-crisis").textContent = crisis.length ? Math.round(crisis.filter(s => s.referOk).length / crisis.length * 100) + "%" : "未考核";
+  $("t-crisis").textContent = crisis.length ? Math.round(crisis.filter(s => s.referOk).length / crisis.length * 100) + "%" : tr("noAssessment");
 
   const agg = {};
   DIMS.forEach(([k]) => agg[k] = { pts: 0, max: 0 });
@@ -1205,25 +1283,25 @@ function renderTeach() {
   const notTested = tStudents.filter(st => st.sessions.every(s => s.referOk === null));
   $("t-tips").innerHTML =
     `<ul style="padding-left:18px;line-height:1.9">` +
-    (weakest ? `<li>全班最薄弱维度是<b style="color:var(--ink)">「${weakest[1]}」</b>,建议下节心理课重点演练对应微课。</li>` : "") +
-    (needRetrain.length ? `<li><b style="color:var(--ink)">${needRetrain.length} 名</b>学生最近一次危机考核未通过,建议安排重训并当面复盘。</li>` : "") +
-    (notTested.length ? `<li>${notTested.length} 名学生尚未做危机考核(Lv.4),建议本周内完成。</li>` : "") +
-    `<li>看板数据来自学生自主导出的档案,仅在本机汇总,不上传。</li></ul>`;
+    (weakest ? `<li>${tr("classWeakest", { dimension: weakest[1] })}</li>` : "") +
+    (needRetrain.length ? `<li>${tr("classRetrain", { count: needRetrain.length })}</li>` : "") +
+    (notTested.length ? `<li>${tr("classUntested", { count: notTested.length })}</li>` : "") +
+    `<li>${tr("classPrivacy")}</li></ul>`;
 
   const rows = tStudents.map(st => {
     const avg = Math.round(st.sessions.reduce((a, b) => a + b.score, 0) / st.sessions.length);
     const c = st.sessions.filter(s => s.referOk !== null);
-    const crisisTag = !c.length ? '<span class="tag">– 未考核</span>'
-      : c[c.length - 1].referOk ? '<span class="tag ok">✓ 正确</span>'
-      : '<span class="tag dgr">⚠ 需重训</span>';
+    const crisisTag = !c.length ? `<span class="tag">– ${tr("noAssessment")}</span>`
+      : c[c.length - 1].referOk ? `<span class="tag ok">${tr("correct")}</span>`
+      : `<span class="tag dgr">${tr("retrain")}</span>`;
     return `<tr><td>${st.id}</td><td>${st.sessions.length}</td><td>${st.sessions.filter(s => s.pass).length}</td><td>${avg}</td><td>${crisisTag}</td></tr>`;
   }).join("");
-  $("t-table").innerHTML = `<tr><th>学生</th><th>会谈数</th><th>通关数</th><th>平均分</th><th>危机考核(最近一次)</th></tr>` + rows;
+  $("t-table").innerHTML = tr("tableHeaders") + rows;
 }
 
 /* 自定义案例注入 */
 (db.settings.customCases || []).forEach(c => {
-  if (!CASES.some(x => x.id === c.id)) CASES.push({ ...c, custom: true, level: c.level || 1, who: c.who || "自定义案例", ava: c.ava || c.name[0] });
+  if (!CASES.some(x => x.id === c.id)) CASES.push({ ...c, custom: true, level: c.level || 1, who: c.who || tr("customCase"), ava: c.ava || c.name[0] });
 });
 
 renderCases();
